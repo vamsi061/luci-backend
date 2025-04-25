@@ -11,27 +11,57 @@ import org.springframework.stereotype.Service;
 public class SearchService {
 
     private String extractImageUrl(Document doc) {
-        Elements infobox = doc.select(".infobox img");
-        if (!infobox.isEmpty()) {
-            return "https:" + infobox.first().attr("src");
-        }
-        Elements galleryImages = doc.select(".gallerybox .thumb img");
-        if (!galleryImages.isEmpty()) {
-            return "https:" + galleryImages.first().attr("src");
-        }
-
-        Elements images = doc.select("img");
-        if (!images.isEmpty()) {
-            String firstImageUrl = images.first().attr("src");
-            if (firstImageUrl.contains("wikipedia")) {
-                return "";
+        // Prioritize infobox images
+        Elements infoboxImages = doc.select(".infobox img");
+        if (!infoboxImages.isEmpty()) {
+            String src = infoboxImages.first().attr("src");
+            if (src != null && !src.isEmpty()) {
+                // Ensure it's an absolute URL or prepend https:
+                return src.startsWith("http") ? src : "https:" + src;
             }
-            return "https:" + firstImageUrl;
         }
-       
+
+        // Check for images within the main content area, often near the beginning
+        Elements contentImages = doc.select("#mw-content-text img");
+         for (Element img : contentImages) {
+            String src = img.attr("src");
+            if (src != null && !src.isEmpty()) {
+                 // Basic filtering for known Wikipedia icons/logos/small images
+                 if (src.contains("/static/images/") ||
+                    src.contains("wikimediafoundation.org") ||
+                    src.contains("px-") || // Often indicates small thumbnail sizes
+                    img.hasClass("mw-file-element") // Filter out file icons etc.
+                    ) {
+                    continue; // Skip known non-content or very small thumbnail images
+                }
+                 // If a potential content image is found, return it
+                 return src.startsWith("http") ? src : "https:" + src;
+            }
+        }
+
+
+        // Fallback to searching all images as a last resort, with more aggressive filtering
+        Elements allImages = doc.select("img");
+        for (Element img : allImages) {
+            String src = img.attr("src");
+             if (src != null && !src.isEmpty()) {
+                // More aggressive filtering for the general image search
+                if (src.contains("/static/images/") ||
+                    src.contains("wikimediafoundation.org") ||
+                     src.contains("px-") ||
+                     src.contains("svg") || // Often icons or diagrams
+                     img.hasClass("mw-file-element") ||
+                     img.parents().is(".thumb")) // Skip gallery thumbnails already covered
+                    {
+                    continue; // Skip non-content or less relevant images
+                }
+                 // If a potentially valid image is found, return it
+                 return src.startsWith("http") ? src : "https:" + src;
+            }
+        }
+
+        // If no suitable image was found after all attempts
         return "";
-
-
     }
 
     public SearchResult searchWikipedia(String query) {

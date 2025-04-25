@@ -31,7 +31,7 @@
             // Clear previous results
             resultsDiv.innerHTML = 'Loading...';
 
-            const url = `http://localhost:8080/api/search?query=${encodeURIComponent(query)}`;
+            const url = `http://localhost:8081/api/search?query=${encodeURIComponent(query)}`;
             console.log('Fetching URL:', url);
             fetch(url)
                 .then(response => {
