@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search UI</title>
+    <style>
+        body { font-family: sans-serif; }
+        #results { margin-top: 20px; }
+        #results img { max-width: 200px; height: auto; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Search Wikipedia</h1>
+    <input type="text" id="searchQuery" placeholder="Enter search term">
+    <div id="results"></div>
+
+    <script>
+        const searchInput = document.getElementById('searchQuery');
+        const resultsDiv = document.getElementById('results');
+
+        searchInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent default form submission
+                const query = searchInput.value;
+                if (query) {
+                    search(query);
+                }
+            }
+        });
+
+        function search(query) {
+            // Clear previous results
+            resultsDiv.innerHTML = 'Loading...';
+
+            const url = `http://localhost:8080/api/search?query=${encodeURIComponent(query)}`;
+            console.log('Fetching URL:', url);
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        console.log("response:", response);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.title && data.summary) {
+                        resultsDiv.innerHTML = `
+                            <h2>${data.title}</h2>
+                            <p>${data.summary}</p>
+                            ${data.imageUrl ? `<img src="${data.imageUrl}" alt="${data.title}">` : ''}
+                        `;
+                    } else {
+                        resultsDiv.innerHTML = '<p>No results found.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching search results:', error);
+                    resultsDiv.innerHTML = `<p>Error: ${error.message}</p>`;
+                });
+        }
+    </script>
+</body>
+</html>
